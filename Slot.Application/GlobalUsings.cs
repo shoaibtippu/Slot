@@ -1,0 +1,9 @@
+﻿global using Microsoft.AspNetCore.Identity;
+global using Slot.Application.Enum;
+global using Slot.Application.Models;
+global using Slot.Application.Ports.In.Account.ForgotPassword;
+global using Slot.Application.Ports.In.Account.Login;
+global using Slot.Application.Ports.In.Account.ResetPassword;
+global using Slot.Application.Ports.In.Account.SignUp;
+global using Slot.Common.Models;
+global using Slot.Common.Results;

@@ -1,0 +1,13 @@
+﻿global using Microsoft.AspNetCore.Identity;
+global using Microsoft.EntityFrameworkCore;
+global using Microsoft.EntityFrameworkCore.Metadata.Builders;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Logging;
+global using Slot.Adapters.PostgreSql.Contexts;
+global using Slot.Adapters.PostgreSql.Contexts.CommonModelContexts;
+global using Slot.Adapters.PostgreSql.Repositories;
+global using Slot.Application.Models;
+global using Slot.Application.Ports.Out.Persistence.RepositoryContracts;
+global using Slot.Common.Models.Traits;
+global using Slot.Common.Traits;

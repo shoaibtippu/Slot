@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/Adapters/">
+    <Project Path="Adapters/Slot.Adapters.FastEndpoint/Slot.Adapters.FastEndpoint.csproj" />
+    <Project Path="Adapters/Slot.Adapters.PostgreSql/Slot.Adapters.PostgreSql.csproj" />
+  </Folder>
+  <Folder Name="/Common/">
+    <Project Path="Common/Slot.Common.EF/Slot.Common.EF.csproj" />
+    <Project Path="Common/Slot.Common/Slot.Common.csproj" />
+  </Folder>
+  <Folder Name="/Core/">
+    <Project Path="Slot.Application/Slot.Application.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+  </Folder>
+  <Project Path="Slot.Host/Slot.Host.csproj" />
+</Solution>
