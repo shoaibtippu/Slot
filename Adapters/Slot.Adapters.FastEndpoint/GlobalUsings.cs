@@ -8,6 +8,7 @@ global using Slot.Application.Ports.In.Account.ForgotPassword;
 global using Slot.Application.Ports.In.Account.ResetPassword;
 global using Slot.Application.Ports.In.Bookings;
 global using Slot.Application.Ports.In.Favorites;
+global using Slot.Application.Ports.In.Conversations;
 global using Slot.Application.Ports.In.Reviews;
 global using Slot.Application.Ports.In.Payments;
 global using Slot.Application.Ports.In.Grounds;

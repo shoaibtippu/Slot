@@ -10,6 +10,7 @@ global using Slot.Application.Ports.In.Grounds;
 global using Slot.Application.Ports.In.Bookings;
 global using Slot.Application.Ports.In.Favorites;
 global using Slot.Application.Ports.In.Notifications;
+global using Slot.Application.Ports.In.Conversations;
 global using Slot.Application.Ports.In.Reviews;
 global using Slot.Application.Ports.In.Sports;
 global using Slot.Application.Ports.Out.Persistence.RepositoryContracts;

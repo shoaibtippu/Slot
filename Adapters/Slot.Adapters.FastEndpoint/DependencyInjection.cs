@@ -7,6 +7,8 @@ public static class DependencyInjection
         services.AddFastEndpoints();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<IConversationService, ConversationService>();
+        services.AddScoped<IMessageService, MessageService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IReviewService, ReviewService>();
