@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Adapters\Slot.Adapters.FastEndpoint\Slot.Adapters.FastEndpoint.csproj" />
     <ProjectReference Include="..\Adapters\Slot.Adapters.PostgreSql\Slot.Adapters.PostgreSql.csproj" />
+    <ProjectReference Include="..\Adapters\Slot.Adapters.Azure.Blob\Slot.Adapters.Azure.Blob.csproj" />
   </ItemGroup>
 
 </Project>

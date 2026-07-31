@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Adapters/">
+    <Project Path="Adapters/Slot.Adapters.Azure.Blob/Slot.Adapters.Azure.Blob.csproj" Id="f6f11812-32ee-420c-b37f-7a60c083c5db" />
     <Project Path="Adapters/Slot.Adapters.FastEndpoint/Slot.Adapters.FastEndpoint.csproj" />
     <Project Path="Adapters/Slot.Adapters.PostgreSql/Slot.Adapters.PostgreSql.csproj" />
   </Folder>

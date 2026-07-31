@@ -4,6 +4,7 @@ using FastEndpoints.Swagger;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
+using Slot.Adapters.Azure.Blob;
 using Slot.Adapters.FastEndpoint;
 using Slot.Adapters.PostgreSql;
 using Slot.Adapters.PostgreSql.Contexts;
@@ -35,6 +36,9 @@ builder.Services.AddIdentityCore<IdentityUser>(opts =>
 
 // ── Database ──────────────────────────────────────────────────────────
 builder.Services.AddPostgreSqlAdapter(builder.Configuration);
+
+// ── Blob storage ───────────────────────────────────────────────────────
+builder.Services.AddAzureBlobAdapter(builder.Configuration);
 
 // ── JWT Authentication ────────────────────────────────────────────────
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

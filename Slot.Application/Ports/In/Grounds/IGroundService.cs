@@ -8,6 +8,10 @@ public interface IGroundService
     Task<Result<GroundDetailResponse>> CreateAsync(string userIdentityId, CreateGroundRequest request, CancellationToken ct = default);
     Task<Result<GroundDetailResponse>> UpdateAsync(string userIdentityId, Guid id, UpdateGroundRequest request, CancellationToken ct = default);
     Task<Result> DeleteAsync(string userIdentityId, Guid id, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<GroundImageResponse>>> GetImagesAsync(Guid groundId, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<GroundImageResponse>>> UploadImagesAsync(string userIdentityId, Guid groundId, IReadOnlyList<GroundImageUploadRequest> images, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<GroundImageResponse>>> ReorderImagesAsync(string userIdentityId, Guid groundId, IReadOnlyList<GroundImageOrderRequest> images, CancellationToken ct = default);
+    Task<Result> DeleteImageAsync(string userIdentityId, Guid groundId, Guid imageId, CancellationToken ct = default);
 }
 
 public record GroundListRequest(

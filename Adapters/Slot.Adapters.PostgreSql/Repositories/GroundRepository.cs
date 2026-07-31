@@ -22,6 +22,21 @@ public class GroundRepository(ApplicationDbContext db) : IGroundRepository
             .ToListAsync(ct);
     }
 
+    public async Task<IReadOnlyList<GroundImage>> GetImagesAsync(Guid groundId, CancellationToken ct = default)
+    {
+        return await db.GroundImages
+            .AsNoTracking()
+            .Where(i => i.GroundId == groundId)
+            .OrderBy(i => i.DisplayOrder)
+            .ToListAsync(ct);
+    }
+
+    public async Task<GroundImage?> FindImageAsync(Guid groundId, Guid imageId, CancellationToken ct = default)
+    {
+        return await db.GroundImages
+            .FirstOrDefaultAsync(i => i.GroundId == groundId && i.Id == imageId, ct);
+    }
+
     public async Task CreateAsync(Ground ground, CancellationToken ct = default)
     {
         await db.Grounds.AddAsync(ground, ct);
@@ -34,9 +49,27 @@ public class GroundRepository(ApplicationDbContext db) : IGroundRepository
         await db.SaveChangesAsync(ct);
     }
 
+    public async Task AddImagesAsync(IEnumerable<GroundImage> images, CancellationToken ct = default)
+    {
+        await db.GroundImages.AddRangeAsync(images, ct);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task UpdateImagesAsync(IEnumerable<GroundImage> images, CancellationToken ct = default)
+    {
+        db.GroundImages.UpdateRange(images);
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task DeleteAsync(Ground ground, CancellationToken ct = default)
     {
         db.Grounds.Remove(ground);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteImageAsync(GroundImage image, CancellationToken ct = default)
+    {
+        db.GroundImages.Remove(image);
         await db.SaveChangesAsync(ct);
     }
 

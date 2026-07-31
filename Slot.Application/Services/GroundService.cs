@@ -1,6 +1,6 @@
 namespace Slot.Application.Services;
 
-public class GroundService(IGroundRepository groundRepository, IUserRepository userRepository) : IGroundService
+public class GroundService(IGroundRepository groundRepository, IUserRepository userRepository, IBlobStorageService blobStorageService) : IGroundService
 {
     public async Task<Result<IReadOnlyList<GroundListItemResponse>>> GetAllAsync(GroundListRequest request, CancellationToken ct = default)
     {
@@ -108,6 +108,119 @@ public class GroundService(IGroundRepository groundRepository, IUserRepository u
             return Result.Failure(Error.UnAuthorized("You are not allowed to modify this ground."));
 
         await groundRepository.DeleteAsync(ground, ct);
+        return Result.Success();
+    }
+
+    public async Task<Result<IReadOnlyList<GroundImageResponse>>> GetImagesAsync(Guid groundId, CancellationToken ct = default)
+    {
+        var images = await groundRepository.GetImagesAsync(groundId, ct);
+        return Result.Success<IReadOnlyList<GroundImageResponse>>(images
+            .OrderBy(i => i.DisplayOrder)
+            .Select(i => new GroundImageResponse(i.Id, i.ImageUrl, i.DisplayOrder))
+            .ToList());
+    }
+
+    public async Task<Result<IReadOnlyList<GroundImageResponse>>> UploadImagesAsync(string userIdentityId, Guid groundId, IReadOnlyList<GroundImageUploadRequest> images, CancellationToken ct = default)
+    {
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure<IReadOnlyList<GroundImageResponse>>(Error.NotFound("User not found."));
+
+        var ground = await groundRepository.FindByIdAsync(groundId, ct);
+        if (ground is null)
+            return Result.Failure<IReadOnlyList<GroundImageResponse>>(Error.NotFound("Ground not found."));
+
+        if (ground.OwnerId != profile.Id)
+            return Result.Failure<IReadOnlyList<GroundImageResponse>>(Error.UnAuthorized("You are not allowed to modify this ground."));
+
+        if (images.Count == 0)
+            return Result.Failure<IReadOnlyList<GroundImageResponse>>(Error.Validation("At least one image is required."));
+
+        var existingImages = await groundRepository.GetImagesAsync(groundId, ct);
+        var nextDisplayOrder = existingImages.Count == 0 ? 1 : existingImages.Max(i => i.DisplayOrder) + 1;
+
+        var createdImages = new List<GroundImage>();
+        foreach (var image in images)
+        {
+            var extension = Path.GetExtension(image.FileName);
+            var blobName = $"{userIdentityId}/groundimages/ground/{groundId}/{Guid.NewGuid()}{extension}";
+            var imageUrl = await blobStorageService.UploadAsync(image.Content, blobName, image.ContentType, ct);
+
+            createdImages.Add(new GroundImage
+            {
+                Id = Guid.NewGuid(),
+                GroundId = groundId,
+                ImageUrl = imageUrl,
+                DisplayOrder = nextDisplayOrder++
+            });
+        }
+
+        await groundRepository.AddImagesAsync(createdImages, ct);
+
+        return Result.Success<IReadOnlyList<GroundImageResponse>>(createdImages
+            .OrderBy(i => i.DisplayOrder)
+            .Select(i => new GroundImageResponse(i.Id, i.ImageUrl, i.DisplayOrder))
+            .ToList());
+    }
+
+    public async Task<Result<IReadOnlyList<GroundImageResponse>>> ReorderImagesAsync(string userIdentityId, Guid groundId, IReadOnlyList<GroundImageOrderRequest> images, CancellationToken ct = default)
+    {
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure<IReadOnlyList<GroundImageResponse>>(Error.NotFound("User not found."));
+
+        var ground = await groundRepository.FindByIdAsync(groundId, ct);
+        if (ground is null)
+            return Result.Failure<IReadOnlyList<GroundImageResponse>>(Error.NotFound("Ground not found."));
+
+        if (ground.OwnerId != profile.Id)
+            return Result.Failure<IReadOnlyList<GroundImageResponse>>(Error.UnAuthorized("You are not allowed to modify this ground."));
+
+        var currentImages = await groundRepository.GetImagesAsync(groundId, ct);
+        var imageMap = currentImages.ToDictionary(i => i.Id);
+
+        foreach (var order in images)
+        {
+            if (imageMap.TryGetValue(order.ImageId, out var image))
+                image.DisplayOrder = order.DisplayOrder;
+            else
+                return Result.Failure<IReadOnlyList<GroundImageResponse>>(Error.NotFound("One or more images were not found."));
+        }
+
+        await groundRepository.UpdateImagesAsync(imageMap.Values, ct);
+
+        return Result.Success<IReadOnlyList<GroundImageResponse>>(imageMap.Values
+            .OrderBy(i => i.DisplayOrder)
+            .Select(i => new GroundImageResponse(i.Id, i.ImageUrl, i.DisplayOrder))
+            .ToList());
+    }
+
+    public async Task<Result> DeleteImageAsync(string userIdentityId, Guid groundId, Guid imageId, CancellationToken ct = default)
+    {
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure(Error.NotFound("User not found."));
+
+        var ground = await groundRepository.FindByIdAsync(groundId, ct);
+        if (ground is null)
+            return Result.Failure(Error.NotFound("Ground not found."));
+
+        if (ground.OwnerId != profile.Id)
+            return Result.Failure(Error.UnAuthorized("You are not allowed to modify this ground."));
+
+        var image = await groundRepository.FindImageAsync(groundId, imageId, ct);
+        if (image is null)
+            return Result.Failure(Error.NotFound("Ground image not found."));
+
+        await blobStorageService.DeleteAsync(image.ImageUrl, ct);
+        await groundRepository.DeleteImageAsync(image, ct);
+
+        var remaining = await groundRepository.GetImagesAsync(groundId, ct);
+        var ordered = remaining.OrderBy(i => i.DisplayOrder).ToList();
+        for (var i = 0; i < ordered.Count; i++)
+            ordered[i].DisplayOrder = i + 1;
+
+        await groundRepository.UpdateImagesAsync(ordered, ct);
         return Result.Success();
     }
 

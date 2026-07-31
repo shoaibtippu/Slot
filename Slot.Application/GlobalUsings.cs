@@ -8,5 +8,6 @@ global using Slot.Application.Ports.In.Account.SignUp;
 global using Slot.Application.Ports.In.Grounds;
 global using Slot.Application.Ports.In.Sports;
 global using Slot.Application.Ports.Out.Persistence.RepositoryContracts;
+global using Slot.Application.Ports.Out.Storage;
 global using Slot.Common.Models;
 global using Slot.Common.Results;
