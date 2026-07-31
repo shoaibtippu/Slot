@@ -10,6 +10,7 @@ public static class DependencyInjection
             opts.UseNpgsql(configuration.GetConnectionString("Default")));
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<ISportRepository, SportRepository>();
         services.AddScoped<IGroundRepository, GroundRepository>();
 

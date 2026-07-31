@@ -6,6 +6,7 @@ global using Slot.Application.Ports.In.Account.Login;
 global using Slot.Application.Ports.In.Account.ResetPassword;
 global using Slot.Application.Ports.In.Account.SignUp;
 global using Slot.Application.Ports.In.Grounds;
+global using Slot.Application.Ports.In.Bookings;
 global using Slot.Application.Ports.In.Sports;
 global using Slot.Application.Ports.Out.Persistence.RepositoryContracts;
 global using Slot.Application.Ports.Out.Storage;
