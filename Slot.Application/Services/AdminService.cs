@@ -51,6 +51,15 @@ public class AdminService(
         return Result.Success<IReadOnlyList<AdminGroundListItemResponse>>(grounds.Select(MapGround).ToList());
     }
 
+    public async Task<Result<AdminGroundDetailResponse>> GetGroundByIdAsync(Guid groundId, CancellationToken ct = default)
+    {
+        var ground = await groundRepository.FindByIdAsync(groundId, ct);
+        if (ground is null)
+            return Result.Failure<AdminGroundDetailResponse>(Error.NotFound("Ground not found."));
+
+        return Result.Success(MapGroundDetail(ground));
+    }
+
     public async Task<Result> ForceDeleteGroundAsync(Guid groundId, CancellationToken ct = default)
     {
         var ground = await groundRepository.FindByIdAsync(groundId, ct);
@@ -67,10 +76,30 @@ public class AdminService(
         return Result.Success<IReadOnlyList<AdminBookingListItemResponse>>(bookings.Select(MapBooking).ToList());
     }
 
+    public async Task<Result<AdminBookingDetailResponse>> GetBookingByIdAsync(Guid bookingId, CancellationToken ct = default)
+    {
+        var booking = await bookingRepository.FindByIdWithDetailsAsync(bookingId, ct);
+        if (booking is null)
+            return Result.Failure<AdminBookingDetailResponse>(Error.NotFound("Booking not found."));
+
+        return Result.Success(MapBookingDetail(booking));
+    }
+
     public async Task<Result<IReadOnlyList<AdminTransactionListItemResponse>>> GetTransactionsAsync(CancellationToken ct = default)
     {
         var payments = await adminRepository.GetPaymentsAsync(ct);
         return Result.Success<IReadOnlyList<AdminTransactionListItemResponse>>(payments.Select(MapTransaction).ToList());
+    }
+
+    public async Task<Result<AdminTransactionDetailResponse>> GetTransactionByIdAsync(Guid paymentId, CancellationToken ct = default)
+    {
+        var payment = await paymentRepository.FindByIdAsync(paymentId, ct);
+        if (payment is null)
+            return Result.Failure<AdminTransactionDetailResponse>(Error.NotFound("Transaction not found."));
+
+        var loaded = await paymentRepository.GetByBookingIdAsync(payment.BookingId, ct);
+        var booking = loaded.FirstOrDefault(p => p.Id == payment.Id) ?? payment;
+        return Result.Success(MapTransactionDetail(booking));
     }
 
     public async Task<Result<AdminDashboardResponse>> GetDashboardAsync(CancellationToken ct = default)
@@ -94,9 +123,18 @@ public class AdminService(
     private static AdminGroundListItemResponse MapGround(Ground ground)
         => new(ground.Id, ground.Name, ground.Address, ground.HourlyRate, ground.AverageRating, ground.OwnerId, ground.Owner.UserIdentity.Email, true, ground.CreatedAt);
 
+    private static AdminGroundDetailResponse MapGroundDetail(Ground ground)
+        => new(ground.Id, ground.Name, ground.Description, ground.Address, ground.Latitude, ground.Longitude, ground.PhoneNumber, ground.AlternatePhoneNumber, ground.HourlyRate, ground.AdvancePercentage, ground.AverageRating, ground.TotalReviews, ground.OwnerId, ground.Owner.UserIdentity.Email, true, ground.CreatedAt, ground.ModifiedAt);
+
     private static AdminBookingListItemResponse MapBooking(Booking booking)
         => new(booking.Id, booking.GroundId, booking.Ground.Name, booking.UserId, booking.User.UserIdentity.Email, booking.BookingDate, booking.StartTime, booking.EndTime, booking.Status, booking.TotalAmount, booking.AdvanceAmount, booking.RemainingAmount, booking.CreatedAt);
 
+    private static AdminBookingDetailResponse MapBookingDetail(Booking booking)
+        => new(booking.Id, booking.GroundId, booking.Ground.Name, booking.UserId, booking.User.UserIdentity.Email, booking.BookingDate, booking.StartTime, booking.EndTime, booking.Status, booking.PricePerHour, booking.TotalAmount, booking.AdvanceAmount, booking.RemainingAmount, booking.Notes, booking.Payments.Select(p => new BookingPaymentResponse(p.Id, p.Amount, p.Method, p.Status, p.TransactionReference, p.PaidAt)).ToList(), booking.CreatedAt, booking.ModifiedAt);
+
     private static AdminTransactionListItemResponse MapTransaction(Payment payment)
         => new(payment.Id, payment.BookingId, payment.Booking.Ground.Name, payment.Booking.UserId, payment.Booking.User.UserIdentity.Email, payment.Amount, payment.Method, payment.Status, payment.TransactionReference, payment.PaidAt, payment.CreatedAt);
+
+    private static AdminTransactionDetailResponse MapTransactionDetail(Payment payment)
+        => new(payment.Id, payment.BookingId, payment.Booking.Ground.Name, payment.Booking.UserId, payment.Booking.User.UserIdentity.Email, payment.Amount, payment.Method, payment.Status, payment.TransactionReference, payment.PaidAt, payment.CreatedAt, payment.ModifiedAt);
 }

@@ -9,6 +9,15 @@ public class SportService(ISportRepository sportRepository) : ISportService
         return Result.Success<IReadOnlyList<SportResponse>>(response);
     }
 
+    public async Task<Result<SportResponse>> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        var sport = await sportRepository.FindByIdAsync(id, ct);
+        if (sport is null)
+            return Result.Failure<SportResponse>(Error.NotFound("Sport not found."));
+
+        return Result.Success(new SportResponse(sport.Id, sport.Name, sport.IconUrl));
+    }
+
     public async Task<Result<SportResponse>> CreateAsync(CreateSportRequest request, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(request.Name))

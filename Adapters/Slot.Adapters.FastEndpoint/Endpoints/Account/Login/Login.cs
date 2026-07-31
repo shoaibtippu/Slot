@@ -4,7 +4,7 @@ public class Login(IAccountService accountService) : Endpoint<LoginEndpointReque
 {
     public override void Configure()
     {
-        Post("/api/v1/account/login");
+        Post("/api/account/login");
         AllowAnonymous();
         Summary(s =>
         {

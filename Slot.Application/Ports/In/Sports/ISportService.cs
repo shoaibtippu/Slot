@@ -3,6 +3,7 @@ namespace Slot.Application.Ports.In.Sports;
 public interface ISportService
 {
     Task<Result<IReadOnlyList<SportResponse>>> GetAllAsync(CancellationToken ct = default);
+    Task<Result<SportResponse>> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<Result<SportResponse>> CreateAsync(CreateSportRequest request, CancellationToken ct = default);
     Task<Result<SportResponse>> UpdateAsync(Guid id, UpdateSportRequest request, CancellationToken ct = default);
     Task<Result> DeleteAsync(Guid id, CancellationToken ct = default);

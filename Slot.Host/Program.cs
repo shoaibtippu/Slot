@@ -71,7 +71,7 @@ builder.Services
             s.Title = "Slot API";
             s.Version = "v1";
         };
-        o.AutoTagPathSegmentIndex = 3;
+        o.AutoTagPathSegmentIndex = 2;
     });
 
 var app = builder.Build();
@@ -88,7 +88,7 @@ app.UseAuthorization();
 
 app.UseFastEndpoints(c =>
     {
-        c.Endpoints.ShortNames = true;
+        c.Endpoints.ShortNames = false;
     })
     .UseSwaggerGen();
 
