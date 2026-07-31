@@ -10,6 +10,7 @@ global using Slot.Adapters.PostgreSql.Repositories;
 global using Slot.Application.Enum;
 global using Slot.Application.Models;
 global using Slot.Application.Ports.In.Favorites;
+global using Slot.Application.Ports.In.Notifications;
 global using Slot.Application.Ports.In.Payments;
 global using Slot.Application.Ports.In.Reviews;
 global using Slot.Application.Ports.In.Bookings;

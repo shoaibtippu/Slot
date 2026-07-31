@@ -12,6 +12,8 @@ public static class DependencyInjection
         // Persistence repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IPushNotificationTokenRepository, PushNotificationTokenRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IFavoriteRepository, FavoriteRepository>();
