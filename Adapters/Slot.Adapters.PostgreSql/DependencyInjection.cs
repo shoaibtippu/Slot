@@ -9,8 +9,10 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(opts =>
             opts.UseNpgsql(configuration.GetConnectionString("Default")));
 
+        // Persistence repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IBookingRepository, BookingRepository>();
+        services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<ISportRepository, SportRepository>();
         services.AddScoped<IGroundRepository, GroundRepository>();
 
