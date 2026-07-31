@@ -141,4 +141,75 @@ public class AccountService(
     }
 
     #endregion
+
+    #region GetProfile
+
+    public async Task<Result<UserProfileResponse>> GetProfileAsync(string userIdentityId, CancellationToken ct = default)
+    {
+        var (identityUser, userProfile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
+
+        if (identityUser is null || userProfile is null)
+            return Result.Failure<UserProfileResponse>(Error.NotFound("User not found."));
+
+        var roles = await userManager.GetRolesAsync(identityUser);
+
+        return Result.Success(new UserProfileResponse(
+            userProfile.Id,
+            identityUser.Email!,
+            null,
+            identityUser.PhoneNumber,
+            userProfile.ImageUrl,
+            roles.ToList()));
+    }
+
+    #endregion
+
+    #region UpdateProfile
+
+    public async Task<Result> UpdateProfileAsync(string userIdentityId, UpdateProfileRequest request, CancellationToken ct = default)
+    {
+        var (identityUser, userProfile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
+
+        if (identityUser is null || userProfile is null)
+            return Result.Failure(Error.NotFound("User not found."));
+
+        identityUser.PhoneNumber = request.PhoneNumber;
+
+        var updateIdentityResult = await userManager.UpdateAsync(identityUser);
+        if (!updateIdentityResult.Succeeded)
+        {
+            var errors = string.Join(", ", updateIdentityResult.Errors.Select(e => e.Description));
+            return Result.Failure(Error.Validation(errors));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ImageUrl))
+            userProfile.ImageUrl = request.ImageUrl;
+
+        await userRepository.UpdateAsync(userProfile, ct);
+
+        return Result.Success();
+    }
+
+    #endregion
+
+    #region ChangePassword
+
+    public async Task<Result> ChangePasswordAsync(string userIdentityId, ChangePasswordRequest request, CancellationToken ct = default)
+    {
+        var (identityUser, userProfile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
+
+        if (identityUser is null || userProfile is null)
+            return Result.Failure(Error.NotFound("User not found."));
+
+        var changePasswordResult = await userManager.ChangePasswordAsync(identityUser, request.CurrentPassword, request.NewPassword);
+        if (!changePasswordResult.Succeeded)
+        {
+            var errors = string.Join(", ", changePasswordResult.Errors.Select(e => e.Description));
+            return Result.Failure(Error.Validation(errors));
+        }
+
+        return Result.Success();
+    }
+
+    #endregion
 }
