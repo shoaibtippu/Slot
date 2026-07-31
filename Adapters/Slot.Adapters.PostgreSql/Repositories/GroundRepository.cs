@@ -37,6 +37,61 @@ public class GroundRepository(ApplicationDbContext db) : IGroundRepository
             .FirstOrDefaultAsync(i => i.GroundId == groundId && i.Id == imageId, ct);
     }
 
+    public async Task<IReadOnlyList<GroundSchedule>> GetSchedulesAsync(Guid groundId, CancellationToken ct = default)
+    {
+        return await db.GroundSchedules
+            .AsNoTracking()
+            .Where(s => s.GroundId == groundId)
+            .OrderBy(s => s.DayOfWeek)
+            .ToListAsync(ct);
+    }
+
+    public async Task ReplaceSchedulesAsync(Guid groundId, IEnumerable<GroundSchedule> schedules, CancellationToken ct = default)
+    {
+        var existing = db.GroundSchedules.Where(s => s.GroundId == groundId);
+        db.GroundSchedules.RemoveRange(existing);
+        await db.GroundSchedules.AddRangeAsync(schedules, ct);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<GroundAvailability>> GetAvailabilityBlocksAsync(Guid groundId, DateOnly date, CancellationToken ct = default)
+    {
+        return await db.GroundAvailabilities
+            .AsNoTracking()
+            .Where(a => a.GroundId == groundId && a.Date == date && a.IsBlocked)
+            .OrderBy(a => a.StartTime)
+            .ToListAsync(ct);
+    }
+
+    public async Task<GroundAvailability?> FindAvailabilityBlockAsync(Guid groundId, Guid blockId, CancellationToken ct = default)
+    {
+        return await db.GroundAvailabilities
+            .FirstOrDefaultAsync(a => a.GroundId == groundId && a.Id == blockId && a.IsBlocked, ct);
+    }
+
+    public async Task AddAvailabilityBlockAsync(GroundAvailability block, CancellationToken ct = default)
+    {
+        await db.GroundAvailabilities.AddAsync(block, ct);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteAvailabilityBlockAsync(GroundAvailability block, CancellationToken ct = default)
+    {
+        db.GroundAvailabilities.Remove(block);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<Booking>> GetBookingsAsync(Guid groundId, DateOnly date, CancellationToken ct = default)
+    {
+        return await db.Bookings
+            .AsNoTracking()
+            .Where(b => b.GroundId == groundId
+                && b.BookingDate == date
+                && (b.Status == BookingStatus.Pending || b.Status == BookingStatus.Approved || b.Status == BookingStatus.Completed))
+            .OrderBy(b => b.StartTime)
+            .ToListAsync(ct);
+    }
+
     public async Task CreateAsync(Ground ground, CancellationToken ct = default)
     {
         await db.Grounds.AddAsync(ground, ct);
@@ -58,6 +113,14 @@ public class GroundRepository(ApplicationDbContext db) : IGroundRepository
     public async Task UpdateImagesAsync(IEnumerable<GroundImage> images, CancellationToken ct = default)
     {
         db.GroundImages.UpdateRange(images);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task ReplaceImagesAsync(Guid groundId, IEnumerable<GroundImage> images, CancellationToken ct = default)
+    {
+        var existing = db.GroundImages.Where(i => i.GroundId == groundId);
+        db.GroundImages.RemoveRange(existing);
+        await db.GroundImages.AddRangeAsync(images, ct);
         await db.SaveChangesAsync(ct);
     }
 

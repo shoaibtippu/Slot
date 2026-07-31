@@ -12,6 +12,11 @@ public interface IGroundService
     Task<Result<IReadOnlyList<GroundImageResponse>>> UploadImagesAsync(string userIdentityId, Guid groundId, IReadOnlyList<GroundImageUploadRequest> images, CancellationToken ct = default);
     Task<Result<IReadOnlyList<GroundImageResponse>>> ReorderImagesAsync(string userIdentityId, Guid groundId, IReadOnlyList<GroundImageOrderRequest> images, CancellationToken ct = default);
     Task<Result> DeleteImageAsync(string userIdentityId, Guid groundId, Guid imageId, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<GroundScheduleResponse>>> GetSchedulesAsync(Guid groundId, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<GroundScheduleResponse>>> ReplaceSchedulesAsync(string userIdentityId, Guid groundId, IReadOnlyList<GroundScheduleRequest> schedules, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<GroundAvailabilityBlockResponse>>> BlockAvailabilityAsync(string userIdentityId, Guid groundId, GroundAvailabilityBlockRequest request, CancellationToken ct = default);
+    Task<Result> UnblockAvailabilityAsync(string userIdentityId, Guid groundId, Guid blockId, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<GroundAvailabilitySlotResponse>>> GetAvailabilityAsync(Guid groundId, DateOnly date, CancellationToken ct = default);
 }
 
 public record GroundListRequest(
@@ -79,3 +84,7 @@ public record GroundDetailResponse(
 public record GroundImageResponse(Guid Id, string ImageUrl, int DisplayOrder);
 public record GroundSportResponse(Guid SportId, string Name, string? IconUrl);
 public record GroundScheduleResponse(DayOfWeek DayOfWeek, TimeSpan OpeningTime, TimeSpan ClosingTime, bool IsClosed);
+public record GroundScheduleRequest(DayOfWeek DayOfWeek, TimeSpan OpeningTime, TimeSpan ClosingTime, bool IsClosed);
+public record GroundAvailabilityBlockRequest(DateOnly Date, TimeSpan StartTime, TimeSpan EndTime);
+public record GroundAvailabilityBlockResponse(Guid Id, DateOnly Date, TimeSpan StartTime, TimeSpan EndTime, bool IsBlocked);
+public record GroundAvailabilitySlotResponse(TimeSpan StartTime, TimeSpan EndTime, string Status, Guid? BookingId, Guid? AvailabilityId);

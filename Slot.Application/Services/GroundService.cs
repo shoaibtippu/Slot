@@ -224,6 +224,149 @@ public class GroundService(IGroundRepository groundRepository, IUserRepository u
         return Result.Success();
     }
 
+    public async Task<Result<IReadOnlyList<GroundScheduleResponse>>> GetSchedulesAsync(Guid groundId, CancellationToken ct = default)
+    {
+        var schedules = await groundRepository.GetSchedulesAsync(groundId, ct);
+        return Result.Success<IReadOnlyList<GroundScheduleResponse>>(schedules
+            .OrderBy(s => s.DayOfWeek)
+            .Select(s => new GroundScheduleResponse(s.DayOfWeek, s.OpeningTime, s.ClosingTime, s.IsClosed))
+            .ToList());
+    }
+
+    public async Task<Result<IReadOnlyList<GroundScheduleResponse>>> ReplaceSchedulesAsync(string userIdentityId, Guid groundId, IReadOnlyList<GroundScheduleRequest> schedules, CancellationToken ct = default)
+    {
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure<IReadOnlyList<GroundScheduleResponse>>(Error.NotFound("User not found."));
+
+        var ground = await groundRepository.FindByIdAsync(groundId, ct);
+        if (ground is null)
+            return Result.Failure<IReadOnlyList<GroundScheduleResponse>>(Error.NotFound("Ground not found."));
+
+        if (ground.OwnerId != profile.Id)
+            return Result.Failure<IReadOnlyList<GroundScheduleResponse>>(Error.UnAuthorized("You are not allowed to modify this ground."));
+
+        if (schedules.Count == 0)
+            return Result.Failure<IReadOnlyList<GroundScheduleResponse>>(Error.Validation("At least one schedule is required."));
+
+        var entities = schedules.Select(s => new GroundSchedule
+        {
+            Id = Guid.NewGuid(),
+            GroundId = groundId,
+            DayOfWeek = s.DayOfWeek,
+            OpeningTime = s.OpeningTime,
+            ClosingTime = s.ClosingTime,
+            IsClosed = s.IsClosed
+        }).ToList();
+
+        await groundRepository.ReplaceSchedulesAsync(groundId, entities, ct);
+
+        return Result.Success<IReadOnlyList<GroundScheduleResponse>>(entities
+            .OrderBy(s => s.DayOfWeek)
+            .Select(s => new GroundScheduleResponse(s.DayOfWeek, s.OpeningTime, s.ClosingTime, s.IsClosed))
+            .ToList());
+    }
+
+    public async Task<Result<IReadOnlyList<GroundAvailabilityBlockResponse>>> BlockAvailabilityAsync(string userIdentityId, Guid groundId, GroundAvailabilityBlockRequest request, CancellationToken ct = default)
+    {
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure<IReadOnlyList<GroundAvailabilityBlockResponse>>(Error.NotFound("User not found."));
+
+        var ground = await groundRepository.FindByIdAsync(groundId, ct);
+        if (ground is null)
+            return Result.Failure<IReadOnlyList<GroundAvailabilityBlockResponse>>(Error.NotFound("Ground not found."));
+
+        if (ground.OwnerId != profile.Id)
+            return Result.Failure<IReadOnlyList<GroundAvailabilityBlockResponse>>(Error.UnAuthorized("You are not allowed to modify this ground."));
+
+        if (request.EndTime <= request.StartTime)
+            return Result.Failure<IReadOnlyList<GroundAvailabilityBlockResponse>>(Error.Validation("End time must be greater than start time."));
+
+        var block = new GroundAvailability
+        {
+            Id = Guid.NewGuid(),
+            GroundId = groundId,
+            Date = request.Date,
+            StartTime = request.StartTime,
+            EndTime = request.EndTime,
+            IsBlocked = true
+        };
+
+        await groundRepository.AddAvailabilityBlockAsync(block, ct);
+
+        return Result.Success<IReadOnlyList<GroundAvailabilityBlockResponse>>(new[]
+        {
+            new GroundAvailabilityBlockResponse(block.Id, block.Date, block.StartTime, block.EndTime, block.IsBlocked)
+        });
+    }
+
+    public async Task<Result> UnblockAvailabilityAsync(string userIdentityId, Guid groundId, Guid blockId, CancellationToken ct = default)
+    {
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure(Error.NotFound("User not found."));
+
+        var ground = await groundRepository.FindByIdAsync(groundId, ct);
+        if (ground is null)
+            return Result.Failure(Error.NotFound("Ground not found."));
+
+        if (ground.OwnerId != profile.Id)
+            return Result.Failure(Error.UnAuthorized("You are not allowed to modify this ground."));
+
+        var block = await groundRepository.FindAvailabilityBlockAsync(groundId, blockId, ct);
+        if (block is null)
+            return Result.Failure(Error.NotFound("Blocked slot not found."));
+
+        await groundRepository.DeleteAvailabilityBlockAsync(block, ct);
+        return Result.Success();
+    }
+
+    public async Task<Result<IReadOnlyList<GroundAvailabilitySlotResponse>>> GetAvailabilityAsync(Guid groundId, DateOnly date, CancellationToken ct = default)
+    {
+        var ground = await groundRepository.FindByIdAsync(groundId, ct);
+        if (ground is null)
+            return Result.Failure<IReadOnlyList<GroundAvailabilitySlotResponse>>(Error.NotFound("Ground not found."));
+
+        var schedules = await groundRepository.GetSchedulesAsync(groundId, ct);
+        var schedule = schedules.FirstOrDefault(s => s.DayOfWeek == date.DayOfWeek && !s.IsClosed);
+        if (schedule is null)
+            return Result.Success<IReadOnlyList<GroundAvailabilitySlotResponse>>(Array.Empty<GroundAvailabilitySlotResponse>());
+
+        var blocks = await groundRepository.GetAvailabilityBlocksAsync(groundId, date, ct);
+        var bookings = await groundRepository.GetBookingsAsync(groundId, date, ct);
+
+        var slotLength = TimeSpan.FromMinutes(60);
+        var result = new List<GroundAvailabilitySlotResponse>();
+        for (var start = schedule.OpeningTime; start < schedule.ClosingTime; start = start.Add(slotLength))
+        {
+            var end = start.Add(slotLength);
+            if (end > schedule.ClosingTime)
+                end = schedule.ClosingTime;
+
+            var availability = blocks.FirstOrDefault(b => Overlaps(start, end, b.StartTime, b.EndTime));
+            if (availability is not null)
+            {
+                result.Add(new GroundAvailabilitySlotResponse(start, end, "Blocked", null, availability.Id));
+                continue;
+            }
+
+            var booking = bookings.FirstOrDefault(b => Overlaps(start, end, b.StartTime, b.EndTime));
+            if (booking is not null)
+            {
+                result.Add(new GroundAvailabilitySlotResponse(start, end, "Booked", booking.Id, null));
+                continue;
+            }
+
+            result.Add(new GroundAvailabilitySlotResponse(start, end, "Available", null, null));
+        }
+
+        return Result.Success<IReadOnlyList<GroundAvailabilitySlotResponse>>(result);
+    }
+
+    private static bool Overlaps(TimeSpan start1, TimeSpan end1, TimeSpan start2, TimeSpan end2)
+        => start1 < end2 && start2 < end1;
+
     private static GroundListItemResponse MapListItem(Ground ground)
     {
         var coverImage = ground.Images.OrderBy(i => i.DisplayOrder).FirstOrDefault()?.ImageUrl;

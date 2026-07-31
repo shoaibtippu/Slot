@@ -7,6 +7,7 @@ global using Microsoft.Extensions.Logging;
 global using Slot.Adapters.PostgreSql.Contexts;
 global using Slot.Adapters.PostgreSql.Contexts.CommonModelContexts;
 global using Slot.Adapters.PostgreSql.Repositories;
+global using Slot.Application.Enum;
 global using Slot.Application.Models;
 global using Slot.Application.Ports.In.Grounds;
 global using Slot.Application.Ports.Out.Persistence.RepositoryContracts;
