@@ -2,6 +2,7 @@
 global using Microsoft.Extensions.DependencyInjection;
 global using Slot.Common.Dto;
 global using Slot.Application.Enum;
+global using Slot.Application.Ports.In.Admin;
 global using Slot.Application.Ports.In.Account;
 global using Slot.Application.Ports.In.Account.Login;
 global using Slot.Application.Ports.In.Account.ForgotPassword;
