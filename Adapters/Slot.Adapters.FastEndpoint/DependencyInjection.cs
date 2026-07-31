@@ -6,6 +6,7 @@ public static class DependencyInjection
     {
         services.AddFastEndpoints();
         services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<ISportService, SportService>();
         return services;
     }
 }
