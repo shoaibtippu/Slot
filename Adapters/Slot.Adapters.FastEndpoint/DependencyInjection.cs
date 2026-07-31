@@ -8,6 +8,7 @@ public static class DependencyInjection
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<ISportService, SportService>();
         services.AddScoped<IGroundService, GroundService>();
         return services;
