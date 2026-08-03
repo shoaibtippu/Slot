@@ -88,7 +88,7 @@ public class AccountService(
             return Result.Failure(Error.Validation(errors));
         }
 
-        await userManager.AddToRoleAsync(identityUser, "User");
+        await userManager.AddToRoleAsync(identityUser, request.Role.ToString());
 
         var userProfile = new User
         {
