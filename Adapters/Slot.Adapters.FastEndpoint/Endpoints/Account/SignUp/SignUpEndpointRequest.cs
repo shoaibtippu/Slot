@@ -6,4 +6,6 @@ public class SignUpEndpointRequest
     public string Password { get; set; } = null!;
     public string FullName { get; set; } = null!;
     public string? PhoneNumber { get; set; }
+    public string? City { get; set; }
+    public SystemRole Role { get; set; }
 }

@@ -19,7 +19,8 @@ public class SignUp(IAccountService accountService) : Endpoint<SignUpEndpointReq
     public override async Task HandleAsync(SignUpEndpointRequest req, CancellationToken ct)
     {
         var result = await accountService.SignUpAsync(
-            new SignUpRequest(req.Email, req.Password, req.FullName, req.PhoneNumber), ct);
+            new SignUpRequest(req.Email, req.Password, req.FullName, req.PhoneNumber, req.City,
+                req.Role), ct);
 
         if (!result.IsSuccess)
         {

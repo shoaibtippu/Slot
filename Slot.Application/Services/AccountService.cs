@@ -71,6 +71,9 @@ public class AccountService(
         if (existing is not null)
             return Result.Failure(Error.Conflict("An account with this email already exists."));
 
+        if (request.Role is not (SystemRole.User or SystemRole.GroundOwner))
+            return Result.Failure(Error.Validation("Invalid role selected."));
+
         var identityUser = new IdentityUser
         {
             UserName = request.Email,
@@ -91,6 +94,8 @@ public class AccountService(
         {
             Id = Guid.NewGuid(),
             UserIdentityId = identityUser.Id,
+            FullName = request.FullName,
+            City = request.City,
         };
 
         await userRepository.CreateAsync(userProfile, ct);
