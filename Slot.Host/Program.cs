@@ -61,6 +61,17 @@ builder.Services.AddAuthorization();
 // ── FastEndpoints + Application services ─────────────────────────────
 builder.Services.AddFastEndpointAdapter();
 
+// ── CORS ──────────────────────────────────────────────────────────────
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 // ── Swagger (FastEndpoints.Swagger / NSwag) ───────────────────────────
 builder.Services
     .AddFastEndpoints()
@@ -83,6 +94,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
