@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<IFavoriteService, FavoriteService>();
         services.AddScoped<ISportService, SportService>();
         services.AddScoped<IGroundService, GroundService>();
+        services.AddScoped<IFacilityService, FacilityService>();
         return services;
     }
 }

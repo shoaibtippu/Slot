@@ -16,3 +16,5 @@ global using Slot.Application.Ports.In.Grounds;
 global using Slot.Application.Ports.In.Notifications;
 global using Slot.Application.Ports.In.Sports;
 global using Slot.Application.Services;
+global using Slot.Application.Ports.In.Facilities;
+global using Microsoft.AspNetCore.Authorization;

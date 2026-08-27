@@ -6,6 +6,7 @@ public static class AdminSeeder
     private const string AdminPassword = "Hello@123";
     private const string AdminRole = "Admin";
     private const string UserRole = "User";
+    private const string GroundOwnerRole = "GroundOwner";
 
     public static async Task SeedAsync(IServiceProvider serviceProvider)
     {
@@ -21,7 +22,7 @@ public static class AdminSeeder
         logger.LogInformation("Database migrated successfully.");
 
         // ── 2. Seed roles ─────────────────────────────────────────────
-        foreach (var role in new[] { AdminRole, UserRole })
+        foreach (var role in new[] { AdminRole, UserRole, GroundOwnerRole })
         {
             if (!await roleManager.RoleExistsAsync(role))
             {
