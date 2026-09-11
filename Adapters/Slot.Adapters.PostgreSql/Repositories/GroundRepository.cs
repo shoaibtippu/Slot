@@ -95,7 +95,7 @@ public class GroundRepository(ApplicationDbContext db) : IGroundRepository
     public async Task CreateAsync(Ground ground, CancellationToken ct = default)
     {
         await db.Grounds.AddAsync(ground, ct);
-        await db.SaveChangesAsync(ct);
+       await db.SaveChangesAsync(ct);
     }
 
     public async Task UpdateAsync(Ground ground, CancellationToken ct = default)

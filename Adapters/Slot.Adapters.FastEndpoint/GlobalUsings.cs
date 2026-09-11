@@ -18,3 +18,4 @@ global using Slot.Application.Ports.In.Sports;
 global using Slot.Application.Services;
 global using Slot.Application.Ports.In.Facilities;
 global using Microsoft.AspNetCore.Authorization;
+global using Slot.Application.Ports.Out.Persistence.RepositoryContracts;

@@ -55,11 +55,9 @@ public class MessageRepository(ApplicationDbContext db) : IMessageRepository
 
     public async Task MarkAllAsReadAsync(Guid conversationId, Guid userId, CancellationToken ct = default)
     {
-        var unread = await db.Messages.Where(m => m.ConversationId == conversationId && m.SenderId != userId && !m.IsRead).ToListAsync(ct);
-        foreach (var message in unread)
-            message.IsRead = true;
-
-        if (unread.Count > 0)
-            await db.SaveChangesAsync(ct);
+        // ExecuteUpdateAsync bypasses change tracking and concurrency tokens — direct SQL UPDATE
+        await db.Messages
+            .Where(m => m.ConversationId == conversationId && m.SenderId != userId && !m.IsRead)
+            .ExecuteUpdateAsync(s => s.SetProperty(m => m.IsRead, true), ct);
     }
 }

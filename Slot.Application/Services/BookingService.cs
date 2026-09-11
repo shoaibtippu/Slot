@@ -1,6 +1,6 @@
 namespace Slot.Application.Services;
 
-public class BookingService(IBookingRepository bookingRepository, IGroundRepository groundRepository, IUserRepository userRepository) : IBookingService
+public class BookingService(IBookingRepository bookingRepository, IGroundRepository groundRepository, IUserRepository userRepository, INotificationService notificationService) : IBookingService
 {
     public async Task<Result<BookingDetailResponse>> CreateAsync(string userIdentityId, CreateBookingRequest request, CancellationToken ct = default)
     {
@@ -53,6 +53,15 @@ public class BookingService(IBookingRepository bookingRepository, IGroundReposit
 
         await bookingRepository.CreateAsync(booking, ct);
         var created = await bookingRepository.FindByIdWithDetailsAsync(booking.Id, ct);
+
+        // Notify the ground owner
+        var userEmail = identity?.Email ?? "A user";
+        await notificationService.CreateNotificationAsync(
+            ground.OwnerId,
+            "New Booking Request",
+            $"A new booking request has been received for {ground.Name} on {booking.BookingDate:dd MMM yyyy} ({booking.StartTime:hh\\:mm tt} - {booking.EndTime:hh\\:mm tt}) from {userEmail}.",
+            ct);
+
         return created is null ? Result.Failure<BookingDetailResponse>(Error.NotFound("Booking not found.")) : Result.Success(MapDetail(created));
     }
 
@@ -114,6 +123,13 @@ public class BookingService(IBookingRepository bookingRepository, IGroundReposit
         booking.Status = request.Status;
         await bookingRepository.UpdateAsync(booking, ct);
 
+        // Notify the user of approval/rejection
+        var statusMsg = request.Status == BookingStatus.Approved
+            ? $"Your booking for {booking.Ground.Name} on {booking.BookingDate:dd MMM yyyy} has been approved! Please proceed with the advance payment of PKR {booking.AdvanceAmount:N0}."
+            : $"Your booking for {booking.Ground.Name} on {booking.BookingDate:dd MMM yyyy} has been rejected.";
+        var statusTitle = request.Status == BookingStatus.Approved ? "Booking Approved" : "Booking Rejected";
+        await notificationService.CreateNotificationAsync(booking.UserId, statusTitle, statusMsg, ct);
+
         var updated = await bookingRepository.FindByIdWithDetailsAsync(booking.Id, ct);
         return updated is null ? Result.Failure<BookingDetailResponse>(Error.NotFound("Booking not found.")) : Result.Success(MapDetail(updated));
     }
@@ -136,6 +152,14 @@ public class BookingService(IBookingRepository bookingRepository, IGroundReposit
 
         booking.Status = BookingStatus.Cancelled;
         await bookingRepository.UpdateAsync(booking, ct);
+
+        // Notify the ground owner
+        var cancellerEmail = booking.User?.UserIdentity?.Email ?? "A user";
+        await notificationService.CreateNotificationAsync(
+            booking.Ground.OwnerId,
+            "Booking Cancelled",
+            $"{cancellerEmail} has cancelled their booking for {booking.Ground.Name} on {booking.BookingDate:dd MMM yyyy}.",
+            ct);
 
         var updated = await bookingRepository.FindByIdWithDetailsAsync(booking.Id, ct);
         return updated is null ? Result.Failure<BookingDetailResponse>(Error.NotFound("Booking not found.")) : Result.Success(MapDetail(updated));

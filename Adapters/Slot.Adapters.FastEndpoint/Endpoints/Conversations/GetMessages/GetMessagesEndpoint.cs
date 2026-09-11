@@ -35,10 +35,10 @@ public class GetMessages(IMessageService messageService) : EndpointWithoutReques
 
         var query = new PagedSearchSortDto
         {
-            PageNumber = Query<int?>("page_number") ?? 1,
-            PageSize = Query<int?>("page_size") ?? 20,
-            OrderBy = Query<string?>("order_by"),
-            Search = Query<string?>("search")
+            PageNumber = Query<int?>("page_number", isRequired: false) ?? 1,
+            PageSize = Query<int?>("page_size", isRequired: false) ?? 20,
+            OrderBy = Query<string?>("order_by", isRequired: false),
+            Search = Query<string?>("search", isRequired: false)
         };
 
         var result = await messageService.GetMessagesAsync(identityId, conversationId, query, ct);

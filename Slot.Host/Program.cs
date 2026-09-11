@@ -1,5 +1,6 @@
 using System.Text;
 using FastEndpoints;
+using Slot.Host.Hubs;
 using FastEndpoints.Swagger;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -54,6 +55,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = jwt.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Secret))
         };
+        opts.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hub/chat"))
+                    context.Token = accessToken;
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -66,11 +78,15 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
             .AllowAnyMethod()
-            .AllowAnyHeader();
+            .AllowAnyHeader()
+            .AllowCredentials();
     });
 });
+
+// ── SignalR ───────────────────────────────────────────────────────────
+builder.Services.AddSignalR();
 
 // ── Swagger (FastEndpoints.Swagger / NSwag) ───────────────────────────
 builder.Services
@@ -104,6 +120,9 @@ app.UseFastEndpoints(c =>
     })
     .UseSwaggerGen();
 
+app.MapHub<ChatHub>("/hub/chat");
+
 await AdminSeeder.SeedAsync(app.Services);
+await UserSeeder.SeedAsync(app.Services);
 
 app.Run();

@@ -1,6 +1,6 @@
 namespace Slot.Application.Services;
 
-public class PaymentService(IBookingRepository bookingRepository, IPaymentRepository paymentRepository, IUserRepository userRepository) : IPaymentService
+public class PaymentService(IBookingRepository bookingRepository, IPaymentRepository paymentRepository, IUserRepository userRepository, INotificationService notificationService) : IPaymentService
 {
     public async Task<Result<BookingPaymentRecordResponse>> RecordBookingPaymentAsync(string userIdentityId, Guid bookingId, RecordBookingPaymentRequest request, CancellationToken ct = default)
     {
@@ -23,6 +23,28 @@ public class PaymentService(IBookingRepository bookingRepository, IPaymentReposi
         };
 
         await paymentRepository.CreateAsync(payment, ct);
+
+        var booking2 = context.Value!;
+        var payerEmail = (await userRepository.FindByIdentityIdAsync(userIdentityId, ct)).Item2?.UserIdentity?.Email ?? "A user";
+
+        // Confirm the booking
+        booking2.Status = BookingStatus.Completed;
+        await bookingRepository.UpdateAsync(booking2, ct);
+
+        // Notify the user that their booking is confirmed
+        await notificationService.CreateNotificationAsync(
+            booking2.UserId,
+            "Booking Confirmed!",
+            $"Your advance payment of PKR {request.Amount:N0} has been received. Your booking for {booking2.Ground.Name} on {booking2.BookingDate:dd MMM yyyy} is now confirmed!",
+            ct);
+
+        // Notify the ground owner about the payment
+        await notificationService.CreateNotificationAsync(
+            booking2.Ground.OwnerId,
+            "Advance Payment Received",
+            $"{payerEmail} has paid PKR {request.Amount:N0} via {request.Method} for the booking on {booking2.BookingDate:dd MMM yyyy}.",
+            ct);
+
         return Result.Success(new BookingPaymentRecordResponse(payment.Id, payment.BookingId, payment.Amount, payment.Method, payment.Status, payment.TransactionReference, payment.PaidAt));
     }
 
@@ -117,6 +139,27 @@ public class PaymentService(IBookingRepository bookingRepository, IPaymentReposi
             payment.Status = success ? PaymentStatus.Paid : PaymentStatus.Failed;
             payment.PaidAt = success ? DateTime.UtcNow : null;
             await paymentRepository.UpdateAsync(payment, ct);
+        }
+
+        if (success)
+        {
+            // Confirm the booking after successful payment
+            booking.Status = BookingStatus.Completed;
+            await bookingRepository.UpdateAsync(booking, ct);
+
+            // Notify the user
+            await notificationService.CreateNotificationAsync(
+                booking.UserId,
+                "Booking Confirmed!",
+                $"Your payment of PKR {amount:N0} via {method} has been received. Your booking for {booking.Ground.Name} on {booking.BookingDate:dd MMM yyyy} is now confirmed!",
+                ct);
+
+            // Notify the ground owner
+            await notificationService.CreateNotificationAsync(
+                booking.Ground.OwnerId,
+                "Advance Payment Received",
+                $"A payment of PKR {amount:N0} via {method} has been received for the booking on {booking.BookingDate:dd MMM yyyy} at {booking.Ground.Name}.",
+                ct);
         }
 
         return Result.Success(new PaymentCallbackResponse(bookingId, payment.Id, payment.Status, payment.TransactionReference!, success ? "Payment recorded successfully." : "Payment failed."));

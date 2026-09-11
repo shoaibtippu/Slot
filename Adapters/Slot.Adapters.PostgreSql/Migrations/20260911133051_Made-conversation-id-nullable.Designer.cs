@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Slot.Adapters.PostgreSql.Contexts;
@@ -11,9 +12,11 @@ using Slot.Adapters.PostgreSql.Contexts;
 namespace Slot.Adapters.PostgreSql.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260911133051_Made-conversation-id-nullable")]
+    partial class Madeconversationidnullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -322,6 +325,9 @@ namespace Slot.Adapters.PostgreSql.Migrations
                     b.Property<Guid>("GroundOwnerId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("GroundOwnerId1")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("ModifiedAt")
                         .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone");
@@ -332,6 +338,9 @@ namespace Slot.Adapters.PostgreSql.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("UserId1")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BookingId")
@@ -339,7 +348,11 @@ namespace Slot.Adapters.PostgreSql.Migrations
 
                     b.HasIndex("GroundOwnerId");
 
+                    b.HasIndex("GroundOwnerId1");
+
                     b.HasIndex("UserId");
+
+                    b.HasIndex("UserId1");
 
                     b.ToTable("Conversations");
                 });
@@ -406,12 +419,12 @@ namespace Slot.Adapters.PostgreSql.Migrations
                         .HasColumnType("numeric(18,2)");
 
                     b.Property<decimal>("Latitude")
-                        .HasPrecision(12, 9)
-                        .HasColumnType("numeric(12,9)");
+                        .HasPrecision(10, 7)
+                        .HasColumnType("numeric(10,7)");
 
                     b.Property<decimal>("Longitude")
-                        .HasPrecision(12, 9)
-                        .HasColumnType("numeric(12,9)");
+                        .HasPrecision(10, 7)
+                        .HasColumnType("numeric(10,7)");
 
                     b.Property<DateTime>("ModifiedAt")
                         .IsConcurrencyToken()
@@ -1147,17 +1160,25 @@ namespace Slot.Adapters.PostgreSql.Migrations
                         .HasForeignKey("BookingId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("Slot.Application.Models.User", "GroundOwner")
+                    b.HasOne("Slot.Application.Models.User", null)
                         .WithMany()
                         .HasForeignKey("GroundOwnerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Slot.Application.Models.User", "User")
+                    b.HasOne("Slot.Application.Models.User", "GroundOwner")
+                        .WithMany()
+                        .HasForeignKey("GroundOwnerId1");
+
+                    b.HasOne("Slot.Application.Models.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Slot.Application.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId1");
 
                     b.Navigation("GroundOwner");
 

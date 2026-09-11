@@ -15,14 +15,14 @@ public class ConversationConfiguration : FullyAuditedEntityConfiguration<Convers
             .HasForeignKey(c => c.BookingId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // GroundOwner FK — references User
-        builder.HasOne<User>()
+        // GroundOwner FK — must explicitly name nav property so EF wires Include(c => c.GroundOwner)
+        builder.HasOne(c => c.GroundOwner)
             .WithMany()
             .HasForeignKey(c => c.GroundOwnerId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // User FK
-        builder.HasOne<User>()
+        builder.HasOne(c => c.User)
             .WithMany()
             .HasForeignKey(c => c.UserId)
             .OnDelete(DeleteBehavior.Restrict);

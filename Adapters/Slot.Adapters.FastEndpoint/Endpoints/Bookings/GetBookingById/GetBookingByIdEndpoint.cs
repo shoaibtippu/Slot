@@ -8,7 +8,7 @@ public class GetBookingById(IBookingService bookingService) : EndpointWithoutReq
 {
     public override void Configure()
     {
-        Get("/api/bookings/{id}");
+        Get("/api/bookings/{id:guid}");
         Summary(s =>
         {
             s.Summary = "Get booking detail with payments.";

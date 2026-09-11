@@ -104,6 +104,19 @@ public class NotificationService(
         return Result.Success();
     }
 
+    public async Task CreateNotificationAsync(Guid userId, string title, string message, CancellationToken ct = default)
+    {
+        var notification = new Notification
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Title = title,
+            Message = message,
+            IsRead = false
+        };
+        await notificationRepository.CreateAsync(notification, ct);
+    }
+
     private static NotificationResponse Map(Notification notification)
         => new(notification.Id, notification.Title, notification.Message, notification.IsRead, notification.CreatedAt);
 }

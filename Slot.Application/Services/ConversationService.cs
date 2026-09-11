@@ -30,9 +30,34 @@ public class ConversationService(
                 UserId = booking.UserId
             };
             await conversationRepository.CreateAsync(conversation, ct);
+            // Reload with nav props
+            conversation = await conversationRepository.FindByIdAsync(conversation.Id, ct) ?? conversation;
         }
 
         return Result.Success(MapDetail(conversation, profile.Id));
+    }
+
+    public async Task<Result<ConversationDetailResponse>> GetOrCreateDirectAsync(string initiatorIdentityId, Guid targetUserId, CancellationToken ct = default)
+    {
+        var (identity, initiator) = await userRepository.FindByIdentityIdAsync(initiatorIdentityId, ct);
+        if (identity is null || initiator is null)
+            return Result.Failure<ConversationDetailResponse>(Error.NotFound("User not found."));
+
+        var conversation = await conversationRepository.FindDirectConversationAsync(initiator.Id, targetUserId, ct);
+        if (conversation is null)
+        {
+            conversation = new Conversation
+            {
+                Id = Guid.NewGuid(),
+                BookingId = null,
+                GroundOwnerId = initiator.Id,
+                UserId = targetUserId
+            };
+            await conversationRepository.CreateAsync(conversation, ct);
+            conversation = await conversationRepository.FindByIdAsync(conversation.Id, ct) ?? conversation;
+        }
+
+        return Result.Success(MapDetail(conversation, initiator.Id));
     }
 
     public async Task<Result<IReadOnlyList<ConversationListItemResponse>>> GetMyConversationsAsync(string userIdentityId, CancellationToken ct = default)
@@ -62,15 +87,32 @@ public class ConversationService(
         return Result.Success(MapDetail(conversation, profile.Id));
     }
 
+    private static (string? name, string? email) GetOtherParty(Conversation conversation, Guid currentUserId)
+    {
+        if (currentUserId == conversation.UserId)
+        {
+            var other = conversation.GroundOwner;
+            return (other?.FullName ?? other?.UserIdentity?.UserName, other?.UserIdentity?.Email);
+        }
+        else
+        {
+            var other = conversation.User;
+            return (other?.FullName ?? other?.UserIdentity?.UserName, other?.UserIdentity?.Email);
+        }
+    }
+
     private static ConversationListItemResponse MapListItem(Conversation conversation, Guid currentUserId)
     {
         var lastMessage = conversation.Messages.OrderByDescending(m => m.CreatedAt).FirstOrDefault();
         var unreadCount = conversation.Messages.Count(m => !m.IsRead && m.SenderId != currentUserId);
+        var (otherName, otherEmail) = GetOtherParty(conversation, currentUserId);
         return new ConversationListItemResponse(
             conversation.Id,
             conversation.BookingId,
             conversation.GroundOwnerId,
             conversation.UserId,
+            otherName,
+            otherEmail,
             lastMessage?.Text,
             lastMessage?.CreatedAt,
             unreadCount);
@@ -91,6 +133,7 @@ public class ConversationService(
             .ToList();
 
         var unreadCount = conversation.Messages.Count(m => !m.IsRead && m.SenderId != currentUserId);
-        return new ConversationDetailResponse(conversation.Id, conversation.BookingId, conversation.GroundOwnerId, conversation.UserId, messages, unreadCount);
+        var (otherName, otherEmail) = GetOtherParty(conversation, currentUserId);
+        return new ConversationDetailResponse(conversation.Id, conversation.BookingId, conversation.GroundOwnerId, conversation.UserId, otherName, otherEmail, messages, unreadCount);
     }
 }

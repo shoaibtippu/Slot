@@ -8,7 +8,7 @@ public class GetMyBookings(IBookingService bookingService) : EndpointWithoutRequ
 {
     public override void Configure()
     {
-        Get("/api/bookings");
+        Get("/api/bookings/my");
         Summary(s =>
         {
             s.Summary = "Get my bookings.";
