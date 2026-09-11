@@ -59,7 +59,7 @@ public class BookingService(IBookingRepository bookingRepository, IGroundReposit
         await notificationService.CreateNotificationAsync(
             ground.OwnerId,
             "New Booking Request",
-            $"A new booking request has been received for {ground.Name} on {booking.BookingDate:dd MMM yyyy} ({booking.StartTime:hh\\:mm tt} - {booking.EndTime:hh\\:mm tt}) from {userEmail}.",
+            $"A new booking request has been received for {ground.Name} on {booking.BookingDate:dd MMM yyyy} ({booking.StartTime:hh\\:mm} - {booking.EndTime:hh\\:mm}) from {userEmail}.",
             ct);
 
         return created is null ? Result.Failure<BookingDetailResponse>(Error.NotFound("Booking not found.")) : Result.Success(MapDetail(created));
