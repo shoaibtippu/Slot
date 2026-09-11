@@ -46,6 +46,16 @@ public class ReviewService(IReviewRepository reviewRepository, IBookingRepositor
         return Result.Success(PagedResult<ReviewResponse>.Success(paged.Data.Select(Map).ToList(), paged.TotalCount, paged.PageNumber, paged.PageSize));
     }
 
+    public async Task<Result<PagedResult<ReviewResponse>>> GetOwnerReviewsAsync(string ownerIdentityId, PagedSearchSortDto query, int? rating = null, Guid? groundId = null, CancellationToken ct = default)
+    {
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(ownerIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure<PagedResult<ReviewResponse>>(Error.NotFound("User not found."));
+
+        var paged = await reviewRepository.GetByOwnerAsync(profile.Id, query, rating, groundId, ct);
+        return Result.Success(PagedResult<ReviewResponse>.Success(paged.Data.Select(Map).ToList(), paged.TotalCount, paged.PageNumber, paged.PageSize));
+    }
+
     public async Task<Result<ReviewResponse>> UpdateAsync(string userIdentityId, Guid reviewId, UpdateReviewRequest request, CancellationToken ct = default)
     {
         var (identity, profile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
@@ -87,6 +97,91 @@ public class ReviewService(IReviewRepository reviewRepository, IBookingRepositor
         return Result.Success();
     }
 
+    public async Task<Result<ReviewResponse>> AddReplyAsync(string ownerIdentityId, Guid reviewId, AddReviewReplyRequest request, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Text))
+            return Result.Failure<ReviewResponse>(Error.Validation("Reply text is required."));
+
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(ownerIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure<ReviewResponse>(Error.NotFound("User not found."));
+
+        var review = await reviewRepository.FindByIdWithReplyAsync(reviewId, ct);
+        if (review is null)
+            return Result.Failure<ReviewResponse>(Error.NotFound("Review not found."));
+
+        if (review.Ground?.OwnerId != profile.Id)
+            return Result.Failure<ReviewResponse>(Error.UnAuthorized("You are not allowed to reply to this review."));
+
+        if (review.Reply is not null)
+            return Result.Failure<ReviewResponse>(Error.Conflict("A reply already exists for this review. Use update to change it."));
+
+        var reply = new ReviewReply
+        {
+            Id = Guid.NewGuid(),
+            ReviewId = reviewId,
+            OwnerId = profile.Id,
+            Text = request.Text.Trim()
+        };
+
+        await reviewRepository.AddReplyAsync(reply, ct);
+
+        var updated = await reviewRepository.FindByIdAsync(reviewId, ct);
+        return updated is null ? Result.Failure<ReviewResponse>(Error.NotFound("Review not found.")) : Result.Success(Map(updated));
+    }
+
+    public async Task<Result<ReviewResponse>> UpdateReplyAsync(string ownerIdentityId, Guid reviewId, UpdateReviewReplyRequest request, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Text))
+            return Result.Failure<ReviewResponse>(Error.Validation("Reply text is required."));
+
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(ownerIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure<ReviewResponse>(Error.NotFound("User not found."));
+
+        var review = await reviewRepository.FindByIdWithReplyAsync(reviewId, ct);
+        if (review is null)
+            return Result.Failure<ReviewResponse>(Error.NotFound("Review not found."));
+
+        if (review.Reply is null)
+            return Result.Failure<ReviewResponse>(Error.NotFound("No reply exists for this review."));
+
+        if (review.Reply.OwnerId != profile.Id)
+            return Result.Failure<ReviewResponse>(Error.UnAuthorized("You are not allowed to edit this reply."));
+
+        review.Reply.Text = request.Text.Trim();
+        await reviewRepository.UpdateReplyAsync(review.Reply, ct);
+
+        var updated = await reviewRepository.FindByIdAsync(reviewId, ct);
+        return updated is null ? Result.Failure<ReviewResponse>(Error.NotFound("Review not found.")) : Result.Success(Map(updated));
+    }
+
+    public async Task<Result> DeleteReplyAsync(string ownerIdentityId, Guid reviewId, CancellationToken ct = default)
+    {
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(ownerIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure(Error.NotFound("User not found."));
+
+        var review = await reviewRepository.FindByIdWithReplyAsync(reviewId, ct);
+        if (review is null)
+            return Result.Failure(Error.NotFound("Review not found."));
+
+        if (review.Reply is null)
+            return Result.Failure(Error.NotFound("No reply exists for this review."));
+
+        if (review.Reply.OwnerId != profile.Id)
+            return Result.Failure(Error.UnAuthorized("You are not allowed to delete this reply."));
+
+        await reviewRepository.DeleteReplyAsync(review.Reply, ct);
+        return Result.Success();
+    }
+
+    private static ReviewReplyResponse? MapReply(ReviewReply? reply)
+    {
+        if (reply is null) return null;
+        return new ReviewReplyResponse(reply.Id, reply.Text, reply.Owner?.UserIdentity?.Email, reply.CreatedAt, reply.ModifiedAt);
+    }
+
     private static ReviewResponse Map(Review review)
-        => new(review.Id, review.GroundId, review.Ground?.Name, review.BookingId, review.UserId, review.User?.UserIdentity?.Email, review.Rating, review.Comment, review.CreatedAt, review.ModifiedAt);
+        => new(review.Id, review.GroundId, review.Ground?.Name, review.BookingId, review.UserId, review.User?.UserIdentity?.Email, review.Rating, review.Comment, review.CreatedAt, review.ModifiedAt, MapReply(review.Reply));
 }

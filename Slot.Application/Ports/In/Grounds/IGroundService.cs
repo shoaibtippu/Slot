@@ -17,6 +17,7 @@ public interface IGroundService
     Task<Result<IReadOnlyList<GroundAvailabilityBlockResponse>>> BlockAvailabilityAsync(string userIdentityId, Guid groundId, GroundAvailabilityBlockRequest request, CancellationToken ct = default);
     Task<Result> UnblockAvailabilityAsync(string userIdentityId, Guid groundId, Guid blockId, CancellationToken ct = default);
     Task<Result<IReadOnlyList<GroundAvailabilitySlotResponse>>> GetAvailabilityAsync(Guid groundId, DateOnly date, CancellationToken ct = default);
+    Task<Result<OwnerStatsResponse>> GetOwnerStatsAsync(string userIdentityId, CancellationToken ct = default);
 }
 
 public record GroundListRequest(

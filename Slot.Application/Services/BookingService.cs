@@ -63,7 +63,17 @@ public class BookingService(IBookingRepository bookingRepository, IGroundReposit
             return Result.Failure<IReadOnlyList<BookingListItemResponse>>(Error.NotFound("User not found."));
 
         var bookings = await bookingRepository.GetMyBookingsAsync(profile.Id, ct);
-        return Result.Success<IReadOnlyList<BookingListItemResponse>>(bookings.Select(MapListItem).ToList());
+        return Result.Success<IReadOnlyList<BookingListItemResponse>>(bookings.Select(b => MapListItem(b)).ToList());
+    }
+
+    public async Task<Result<IReadOnlyList<BookingListItemResponse>>> GetGroundOwnerBookingsAsync(string userIdentityId, CancellationToken ct = default)
+    {
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure<IReadOnlyList<BookingListItemResponse>>(Error.NotFound("User not found."));
+
+        var bookings = await bookingRepository.GetGroundOwnerBookingsAsync(profile.Id, ct);
+        return Result.Success<IReadOnlyList<BookingListItemResponse>>(bookings.Select(b => MapListItem(b, includeUserEmail: true)).ToList());
     }
 
     public async Task<Result<BookingDetailResponse>> GetByIdAsync(string userIdentityId, Guid id, CancellationToken ct = default)
@@ -157,8 +167,8 @@ public class BookingService(IBookingRepository bookingRepository, IGroundReposit
     private static bool Overlaps(TimeSpan start1, TimeSpan end1, TimeSpan start2, TimeSpan end2)
         => start1 < end2 && start2 < end1;
 
-    private static BookingListItemResponse MapListItem(Booking booking)
-        => new(booking.Id, booking.GroundId, booking.Ground.Name, booking.BookingDate, booking.StartTime, booking.EndTime, booking.Status, booking.TotalAmount, booking.AdvanceAmount, booking.RemainingAmount);
+    private static BookingListItemResponse MapListItem(Booking booking, bool includeUserEmail = false)
+        => new(booking.Id, booking.GroundId, booking.Ground.Name, booking.BookingDate, booking.StartTime, booking.EndTime, booking.Status, booking.TotalAmount, booking.AdvanceAmount, booking.RemainingAmount, includeUserEmail ? booking.User?.UserIdentity?.Email : null);
 
     private static BookingDetailResponse MapDetail(Booking booking)
         => new(

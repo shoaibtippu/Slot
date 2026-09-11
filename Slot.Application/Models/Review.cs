@@ -17,5 +17,7 @@ public class Review : FullyAuditedEntity<Guid>
     public Guid BookingId { get; set; }
     public Booking Booking { get; set; } = null!;
 
+    public ReviewReply? Reply { get; set; }
+
     #endregion
 }

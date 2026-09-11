@@ -34,6 +34,20 @@ public class BookingRepository(ApplicationDbContext db) : IBookingRepository
             .FirstOrDefaultAsync(b => b.Id == id, ct);
     }
 
+    public async Task<IReadOnlyList<Booking>> GetGroundOwnerBookingsAsync(Guid ownerId, CancellationToken ct = default)
+    {
+        return await db.Bookings
+            .AsNoTracking()
+            .Include(b => b.Ground)
+            .Include(b => b.User)
+                .ThenInclude(u => u.UserIdentity)
+            .Include(b => b.Payments)
+            .Where(b => b.Ground.OwnerId == ownerId)
+            .OrderByDescending(b => b.BookingDate)
+            .ThenByDescending(b => b.StartTime)
+            .ToListAsync(ct);
+    }
+
     public async Task<IReadOnlyList<Booking>> GetByGroundAndDateAsync(Guid groundId, DateOnly date, CancellationToken ct = default)
     {
         return await db.Bookings

@@ -4,6 +4,7 @@ public interface IBookingService
 {
     Task<Result<BookingDetailResponse>> CreateAsync(string userIdentityId, CreateBookingRequest request, CancellationToken ct = default);
     Task<Result<IReadOnlyList<BookingListItemResponse>>> GetMyBookingsAsync(string userIdentityId, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<BookingListItemResponse>>> GetGroundOwnerBookingsAsync(string userIdentityId, CancellationToken ct = default);
     Task<Result<BookingDetailResponse>> GetByIdAsync(string userIdentityId, Guid id, CancellationToken ct = default);
     Task<Result<BookingDetailResponse>> UpdateStatusAsync(string userIdentityId, Guid id, UpdateBookingStatusRequest request, CancellationToken ct = default);
     Task<Result<BookingDetailResponse>> CancelAsync(string userIdentityId, Guid id, CancellationToken ct = default);
@@ -23,7 +24,8 @@ public record BookingListItemResponse(
     BookingStatus Status,
     decimal TotalAmount,
     decimal AdvanceAmount,
-    decimal RemainingAmount);
+    decimal RemainingAmount,
+    string? UserEmail = null);
 
 public record BookingDetailResponse(
     Guid Id,

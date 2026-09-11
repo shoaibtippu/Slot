@@ -1,6 +1,6 @@
 namespace Slot.Application.Services;
 
-public class GroundService(IGroundRepository groundRepository, IUserRepository userRepository, IBlobStorageService blobStorageService) : IGroundService
+public class GroundService(IGroundRepository groundRepository, IUserRepository userRepository, IBlobStorageService blobStorageService, IBookingRepository bookingRepository, IReviewService reviewService) : IGroundService
 {
     public async Task<Result<IReadOnlyList<GroundListItemResponse>>> GetAllAsync(GroundListRequest request, CancellationToken ct = default)
     {
@@ -362,6 +362,68 @@ public class GroundService(IGroundRepository groundRepository, IUserRepository u
         }
 
         return Result.Success<IReadOnlyList<GroundAvailabilitySlotResponse>>(result);
+    }
+
+    public async Task<Result<OwnerStatsResponse>> GetOwnerStatsAsync(string userIdentityId, CancellationToken ct = default)
+    {
+        var (identity, profile) = await userRepository.FindByIdentityIdAsync(userIdentityId, ct);
+        if (identity is null || profile is null)
+            return Result.Failure<OwnerStatsResponse>(Error.NotFound("User not found."));
+
+        var grounds = await groundRepository.FindByOwnerIdAsync(profile.Id, ct);
+        var allBookings = await bookingRepository.GetGroundOwnerBookingsAsync(profile.Id, ct);
+
+        var totalRevenue = allBookings
+            .Where(b => b.Status == BookingStatus.Completed)
+            .Sum(b => b.TotalAmount);
+
+        var pendingRevenue = allBookings
+            .Where(b => b.Status == BookingStatus.Approved)
+            .Sum(b => b.TotalAmount);
+
+        var avgRating = grounds.Count > 0 ? grounds.Average(g => (double)g.AverageRating) : 0.0;
+
+        var latestReviews = new List<OwnerLatestReview>();
+        foreach (var ground in grounds)
+        {
+            if (latestReviews.Count >= 3) break;
+            var reviewsResult = await reviewService.GetByGroundAsync(ground.Id, new PagedSearchSortDto { PageNumber = 1, PageSize = 3 }, ct);
+            if (!reviewsResult.IsSuccess || reviewsResult.Value is null) continue;
+            foreach (var r in reviewsResult.Value.Data)
+            {
+                if (latestReviews.Count >= 3) break;
+                latestReviews.Add(new OwnerLatestReview(r.UserEmail, r.Rating, r.Comment, r.GroundName, r.CreatedAt));
+            }
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var sevenDaysAgo = today.AddDays(-6);
+        var countsByDate = allBookings
+            .Where(b => b.BookingDate >= sevenDaysAgo && b.BookingDate <= today)
+            .GroupBy(b => b.BookingDate)
+            .ToDictionary(g => g.Key, g => g.Count());
+        var weeklyBookings = Enumerable.Range(0, 7)
+            .Select(i =>
+            {
+                var date = sevenDaysAgo.AddDays(i);
+                return new WeeklyBookingItem(
+                    date.DayOfWeek.ToString()[..3],
+                    countsByDate.TryGetValue(date, out var c) ? c : 0);
+            })
+            .ToList();
+
+        return Result.Success(new OwnerStatsResponse(
+            TotalGrounds: grounds.Count,
+            TotalBookings: allBookings.Count,
+            PendingBookings: allBookings.Count(b => b.Status == BookingStatus.Pending),
+            ConfirmedBookings: allBookings.Count(b => b.Status == BookingStatus.Approved),
+            CompletedBookings: allBookings.Count(b => b.Status == BookingStatus.Completed),
+            CancelledBookings: allBookings.Count(b => b.Status is BookingStatus.Cancelled or BookingStatus.Rejected),
+            TotalRevenue: totalRevenue,
+            PendingRevenue: pendingRevenue,
+            AverageRating: (decimal)avgRating,
+            LatestReviews: latestReviews,
+            WeeklyBookings: weeklyBookings));
     }
 
     private static bool Overlaps(TimeSpan start1, TimeSpan end1, TimeSpan start2, TimeSpan end2)
